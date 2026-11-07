@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome glyph for themed icons (Android 13+ tints it). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="@color/icon_fg" android:strokeWidth="5" android:fillColor="#00000000"
+        android:pathData="M54,33 a21,21 0 1,1 0,42 a21,21 0 1,1 0,-42"/>
+    <path android:strokeColor="@color/icon_fg" android:strokeWidth="5" android:fillColor="#00000000"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M54,43 V54 L61,59 M34,37 L42,29 M74,37 L66,29 M41,74 L37,79 M67,74 L71,79"/>
+    <path android:fillColor="@color/icon_fg"
+        android:pathData="M28,56 a2.5,2.5 0 1,1 0.1,0 M80,50 a2.5,2.5 0 1,1 0.1,0 M83,62 a2,2 0 1,1 0.1,0 M25,46 a2,2 0 1,1 0.1,0"/>
+</vector>

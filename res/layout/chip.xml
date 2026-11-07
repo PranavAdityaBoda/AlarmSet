@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp" android:layout_height="44dp" android:layout_margin="4dp"
+    android:background="@drawable/bg_chip" android:gravity="center"
+    android:textColor="@color/on_chip" android:textSize="15sp" android:fontFamily="sans-serif-medium"/>

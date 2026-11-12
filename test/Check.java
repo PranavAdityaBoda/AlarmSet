@@ -1,6 +1,8 @@
 import static com.pranav.spread.Spread.*;
 
+import com.pranav.spread.Sets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 
 // Run by build.sh on the desktop JVM. Fails the build if the alarm math breaks.
@@ -34,6 +36,12 @@ public class Check {
         for (int i = 1; i < t.length; i++) gaps.add(t[i] - t[i - 1]);
         check(gaps.size() > 2, "gaps look even");
         for (int i = 1; i <= 10; i++) check(t[i] > 360 + (i - 1) * 59 / 10 && t[i] <= 360 + i * 59 / 10, "slice coverage");
+
+        // Saved sets: newest first, no duplicates, remove works, empty storage parses to nothing.
+        String st = Sets.add(Sets.add(Sets.add("", "1140,1200,10"), "600,660,20"), "1140,1200,10");
+        check(Sets.parse(st).equals(List.of("1140,1200,10", "600,660,20")), "sets dedupe / order");
+        check(Sets.parse(Sets.remove(st, "1140,1200,10")).equals(List.of("600,660,20")), "sets remove");
+        check(Sets.parse("").isEmpty(), "empty sets");
         System.out.println("Check passed");
     }
 

@@ -16,6 +16,10 @@ Copy `AlarmSet.apk` to the phone (USB, Drive, Telegram, anything works), open it
 - Set N alarms sends them to Clock without opening it. Each one is labeled `Spread`.
 - Turn off alarms opens the Clock app's alarm page, where you turn them off or delete them.
 
+### Sets
+
+Each time you set alarms, those exact times are saved as a set in the Sets tab, along with the range and count. Setting the same times again moves that set to the top, so you never get a duplicate. A new shuffle gives different times, so it becomes a new set. Tap the clock icon on a set to send those same times straight to the Clock app, with no new randomizing. The app stays on the Sets tab. The trash icon deletes a set.
+
 ### Limits
 
 Android lets apps add alarms to the Clock app. It doesn't let them read or delete alarms there. Android does have a "dismiss alarm" request, but OnePlus Clock answers it by opening its own screen without turning anything off. That's why Turn off alarms just opens Clock.
@@ -37,7 +41,8 @@ AndroidManifest.xml
 build.sh                         build + test, no Gradle
 src/com/pranav/spread/
   Spread.java                    alarm math, plain Java
-  MainActivity.java              the one screen and the Clock intents
+  Sets.java                      saved sets storage, plain Java
+  MainActivity.java              the New and Sets tabs and the Clock intents
 res/                             layouts, Material You colors (light/dark), icon
 test/Check.java                  runs on the desktop JVM during the build
 docs/superpowers/plans/          implementation plan
@@ -48,11 +53,12 @@ docs/superpowers/plans/          implementation plan
 - Clock app instead of its own alarm engine. Setting alarms matters most and works reliably through `AlarmClock.ACTION_SET_ALARM`. Ringing its own alarms would make delete and off guaranteed, at the cost of a lot more code (ring screen, sound, reboot handling).
 - How the spread works. The free minutes between start and end are cut into N equal slices, and each alarm lands on a random minute in its slice. The result is uneven but covers the whole range, and no two alarms share a minute.
 - Framework widgets only. No Gradle, no AndroidX. The colors use `@android:color/system_*`, so the app follows the wallpaper theme and dark mode like OnePlus's own apps.
+- Saved sets live in SharedPreferences as one string of `start,end,count,times` lines, newest first, where times are the exact alarm minutes. A set is identified by that exact string, which is how duplicates get caught. An empty count means auto.
 - What you see is what gets set. The Set button sends the previewed times and doesn't reroll.
 
 ## Testing
 
-`build.sh` runs `test/Check.java` and fails the build if the math breaks. It covers ordering, start/end placement, midnight wrap, count limits, an equal start and end, the auto count and slice coverage.
+`build.sh` runs `test/Check.java` and fails the build if the math breaks. It covers ordering, start/end placement, midnight wrap, count limits, an equal start and end, the auto count and slice coverage. It also checks that saved sets dedupe, stay newest first and delete correctly.
 
 The UI hasn't been run on a device or emulator yet.
 

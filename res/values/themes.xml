@@ -52,6 +52,19 @@
         <item name="android:focusable">true</item>
     </style>
 
+    <style name="Tab">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/tab_text</item>
+        <item name="android:background">@drawable/bg_segment_item</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
     <style name="TextAction">
         <item name="android:minWidth">0dp</item>
         <item name="android:minHeight">0dp</item>

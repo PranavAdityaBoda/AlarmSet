@@ -15,10 +15,14 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.widget.EditText;
 import android.widget.GridLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Random;
 
 public class MainActivity extends Activity {
@@ -30,9 +34,11 @@ public class MainActivity extends Activity {
     int start, end; // minutes since midnight
     int[] preview;
 
-    TextView fromTime, toTime, countNote, problem, setButton;
+    TextView fromTime, toTime, countNote, problem, setButton, tabNew, tabSets, setsNote;
     EditText count;
     GridLayout chips;
+    LinearLayout setsList;
+    View pageNew, pageSets, bottomBar;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -46,6 +52,13 @@ public class MainActivity extends Activity {
         setButton = findViewById(R.id.set);
         count = findViewById(R.id.count);
         chips = findViewById(R.id.chips);
+        tabNew = findViewById(R.id.tab_new);
+        tabSets = findViewById(R.id.tab_sets);
+        setsNote = findViewById(R.id.sets_note);
+        setsList = findViewById(R.id.sets_list);
+        pageNew = findViewById(R.id.page_new);
+        pageSets = findViewById(R.id.page_sets);
+        bottomBar = findViewById(R.id.bottom_bar);
 
         prefs = getSharedPreferences("spread", MODE_PRIVATE);
         start = prefs.getInt("start", 6 * 60);
@@ -56,6 +69,8 @@ public class MainActivity extends Activity {
         findViewById(R.id.to).setOnClickListener(v -> pickTime(false));
         findViewById(R.id.shuffle).setOnClickListener(v -> reroll());
         setButton.setOnClickListener(v -> setAlarms());
+        tabNew.setOnClickListener(v -> showTab(false));
+        tabSets.setOnClickListener(v -> showTab(true));
         // OnePlus Clock ignores other apps' dismiss requests, so turning off happens in Clock itself.
         findViewById(R.id.turn_off).setOnClickListener(v -> send(new Intent(AlarmClock.ACTION_SHOW_ALARMS)));
         count.addTextChangedListener(new TextWatcher() {
@@ -65,6 +80,48 @@ public class MainActivity extends Activity {
         });
 
         reroll();
+        refreshSets();
+        showTab(false);
+    }
+
+    void showTab(boolean sets) {
+        tabNew.setSelected(!sets);
+        tabSets.setSelected(sets);
+        pageNew.setVisibility(sets ? View.GONE : View.VISIBLE);
+        pageSets.setVisibility(sets ? View.VISIBLE : View.GONE);
+        bottomBar.setVisibility(sets ? View.GONE : View.VISIBLE);
+    }
+
+    /** Rebuild the Sets tab from storage. Each entry is "start,end,count,t1 t2 ...": count "" means auto, t are the exact alarm minutes. */
+    void refreshSets() {
+        List<String> sets = Sets.parse(prefs.getString("sets", ""));
+        setsList.removeAllViews();
+        for (String set : sets) {
+            String[] p = set.split(",", -1);
+            if (p.length < 4) continue; // saved by 1.4 before sets kept their times; nothing to replay
+            int s = Integer.parseInt(p[0]), e = Integer.parseInt(p[1]);
+            int[] times = Arrays.stream(p[3].split(" ")).mapToInt(Integer::parseInt).toArray();
+            View card = getLayoutInflater().inflate(R.layout.set_item, setsList, false);
+            ((TextView) card.findViewById(R.id.range)).setText(fmt(s) + " – " + fmt(e));
+            ((TextView) card.findViewById(R.id.detail)).setText(times.length + " alarms");
+            // Sends the saved times straight to Clock and stays on this tab.
+            card.findViewById(R.id.load).setOnClickListener(v -> {
+                if (!sendAll(times)) return;
+                prefs.edit().putString("sets", Sets.add(prefs.getString("sets", ""), set)).apply();
+                refreshSets();
+                toast(times.length + " alarms sent to Clock");
+            });
+            card.findViewById(R.id.delete).setOnClickListener(v -> {
+                prefs.edit().putString("sets", Sets.remove(prefs.getString("sets", ""), set)).apply();
+                refreshSets();
+            });
+            setsList.addView(card);
+        }
+        int shown = setsList.getChildCount();
+        tabSets.setText(shown == 0 ? "Sets" : "Sets · " + shown);
+        setsNote.setText(shown == 0
+                ? "No sets yet. Each time you set alarms, those exact times are saved here so you can set them again."
+                : "Tap the clock to set the same alarms again.");
     }
 
     /** Android 15 draws apps edge to edge; keep content clear of the status bar, nav bar and keyboard. */
@@ -88,14 +145,18 @@ public class MainActivity extends Activity {
 
     /** Recompute the preview from the current inputs. The Set button sends exactly what is shown. */
     void reroll() {
-        fromTime.setText(fmt(start));
-        toTime.setText(fmt(end));
         String c = count.getText().toString().trim();
         boolean auto = c.isEmpty();
         int n = auto ? Spread.autoCount(start, end) : Integer.parseInt(c);
-        preview = Spread.times(start, end, n, random);
         countNote.setText(auto ? "Auto: " + n + ", about one every 5 min" : "Start and end are added on top");
+        show(Spread.times(start, end, n, random));
+    }
 
+    /** Show these times as the preview; Set sends exactly them. Null means the inputs are impossible. */
+    void show(int[] times) {
+        preview = times;
+        fromTime.setText(fmt(start));
+        toTime.setText(fmt(end));
         chips.removeAllViews();
         boolean ok = preview != null;
         problem.setVisibility(ok ? View.GONE : View.VISIBLE);
@@ -121,20 +182,29 @@ public class MainActivity extends Activity {
         setButton.setText("Set " + preview.length + " alarms");
     }
 
-    void setAlarms() {
-        if (preview == null) return;
-        for (int m : preview) {
+    boolean sendAll(int[] times) {
+        for (int m : times) {
             boolean sent = send(new Intent(AlarmClock.ACTION_SET_ALARM)
                     .putExtra(AlarmClock.EXTRA_HOUR, m / 60)
                     .putExtra(AlarmClock.EXTRA_MINUTES, m % 60)
                     .putExtra(AlarmClock.EXTRA_MESSAGE, LABEL)
                     .putExtra(AlarmClock.EXTRA_VIBRATE, true)
                     .putExtra(AlarmClock.EXTRA_SKIP_UI, true));
-            if (!sent) return;
+            if (!sent) return false;
         }
+        return true;
+    }
+
+    void setAlarms() {
+        if (preview == null || !sendAll(preview)) return;
         setButton.setEnabled(false); // same preview again would duplicate alarms; reroll() re-enables
         setButton.setText("Alarms set");
-        prefs.edit().putString("count", count.getText().toString().trim()).apply();
+        String c = count.getText().toString().trim();
+        if (!c.isEmpty()) c = String.valueOf(Integer.parseInt(c)); // "010" and "10" are the same set
+        prefs.edit().putString("count", c)
+                .putString("sets", Sets.add(prefs.getString("sets", ""), start + "," + end + "," + c + ","
+                        + Arrays.stream(preview).mapToObj(String::valueOf).collect(Collectors.joining(" ")))).apply();
+        refreshSets();
         toast(preview.length + " alarms sent to Clock");
     }
 
